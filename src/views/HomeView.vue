@@ -5,8 +5,11 @@ import axios from 'axios'
 const state = reactive({ rssUrl: '' })
 async function handleAddRss() {
   console.log('state: ', state)
-  const res = await axios.post('http://localhost:3000/qbt/addRssUrl', { rssUrl: state.rssUrl })
-  console.log('res: ', res)
+  const { data } =
+    (await axios.post('http://localhost:3000/qbt/addRssUrl', { rssUrl: state.rssUrl })) || {}
+  console.log('data: ', data)
+  const { success } = data || {}
+  console.log('success: ', success)
 }
 </script>
 

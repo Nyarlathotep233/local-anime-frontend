@@ -9,10 +9,9 @@
 
     <div class="wrapper">
       <HelloWorld msg="You did it!" />
-
     </div>
-  </header> -->
-  <!-- <nav>
+  </header>
+  <nav>
     <RouterLink to="/">Home</RouterLink>
     <RouterLink to="/about">About</RouterLink>
   </nav> -->
