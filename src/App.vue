@@ -1,8 +1,6 @@
 <script setup lang="ts">
 // import { RouterLink, RouterView } from 'vue-router'
 // import HelloWorld from './components/HelloWorld.vue'
-
-import './handler/qbit/index'
 </script>
 
 <template>
@@ -14,10 +12,10 @@ import './handler/qbit/index'
 
     </div>
   </header> -->
-  <nav>
+  <!-- <nav>
     <RouterLink to="/">Home</RouterLink>
     <RouterLink to="/about">About</RouterLink>
-  </nav>
+  </nav> -->
 
   <RouterView />
 </template>
