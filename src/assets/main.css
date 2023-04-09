@@ -1,7 +1,8 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
+  max-width: 1920px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem;
 
@@ -30,6 +31,8 @@ a,
   #app {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    /* padding: 0 2rem; */
+    min-width: 1024px;
+    height: 100vh;
   }
 }
