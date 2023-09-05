@@ -6,7 +6,7 @@ import { wildcardPattern } from 'wildcard-regex'
 
 const form = reactive({
   rssUrl: '',
-  notContainRule: '720|合集|繁体|JPTC|繁日|\\d+-\\d+|BIG5'
+  notContainRule: '720|合集|繁体|JPTC|繁日|\\d+-\\d+|BIG5|MKV'
 })
 
 const state = reactive({
