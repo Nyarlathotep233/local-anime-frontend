@@ -4,13 +4,25 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { wildcardPattern } from 'wildcard-regex'
 
+const TAG_TYPE_OF_STATUS = {
+  READY: 'success',
+  UNREADY: 'warning'
+}
+
 const form = reactive({
   rssUrl: '',
   notContainRule: '720|合集|繁体|JPTC|繁日|\\d+-\\d+|BIG5|MKV'
 })
 
 const state = reactive({
-  tableData: []
+  tableData: [],
+  qbtInfo: {} as any,
+  qbtConfigForm: {
+    host: '',
+    username: '',
+    password: ''
+  },
+  intervalInstance: null as any
 })
 async function handleAddRss() {
   const { rssUrl, notContainRule } = form
@@ -53,7 +65,6 @@ async function handleRequestRss() {
     })) || {}
 
   const items = data?.rss?.channel?.item
-  console.log('items: ', items)
 
   state.tableData = items?.map?.((item: any) => {
     const { title } = item
@@ -114,10 +125,96 @@ const tableRowClassName = ({ row: { title } }: { row: { title: string } }) => {
   }
   return 'success-row'
 }
+
+async function getQbtInfo() {
+  const { data } = (await axios.get('http://localhost:3000/qbt/getQbtInfo')) || {}
+
+  return data
+}
+
+async function initQbtInfo() {
+  state.qbtInfo = await getQbtInfo()
+}
+
+async function getQbtConfig() {
+  const { data } = (await axios.get('http://localhost:3000/qbt/getQbtConfig')) || {}
+
+  return data
+}
+
+async function initQbtConfig() {
+  state.qbtConfigForm = (await getQbtConfig()).serverInfo
+}
+
+async function syncQbt() {
+  initQbtInfo()
+
+  state.intervalInstance = setInterval(async () => {
+    initQbtInfo()
+  }, 10000)
+}
+
+async function getMikanInfo() {
+  const { data } = (await axios.get('http://localhost:3000/mikan/test')) || {}
+
+  return data
+}
+
+async function handleSetConfig() {
+  const { data } =
+    (await axios.post('http://localhost:3000/qbt/setConfig', {
+      setting: {
+        serverInfo: {
+          host: state.qbtConfigForm.host,
+          username: state.qbtConfigForm.username,
+          password: state.qbtConfigForm.password
+        }
+      }
+    })) || {}
+
+  if (data.success) {
+    ElMessage.success('更新配置成功')
+  }
+
+  initQbtConfig()
+  initQbtInfo()
+}
+
+async function init() {
+  getMikanInfo()
+  syncQbt()
+  initQbtConfig()
+}
+
+init()
 </script>
 
 <template>
   <div class="main">
+    <div class="tag-list">
+      <el-tag :type="TAG_TYPE_OF_STATUS[state.qbtInfo?.status] || ''">
+        {{ state.qbtInfo.status }}
+      </el-tag>
+      <el-tag> VERSION: {{ state.qbtInfo.version }} </el-tag>
+    </div>
+
+    <hr />
+    <el-form :model="state.qbtConfigForm" label-width="120px">
+      <el-form-item label="qbit webUI 地址">
+        <el-input v-model="state.qbtConfigForm.host" clearable />
+      </el-form-item>
+      <el-form-item label="用户名">
+        <el-input v-model="state.qbtConfigForm.username" clearable />
+      </el-form-item>
+      <el-form-item label="密码">
+        <el-input v-model="state.qbtConfigForm.password" clearable show-password />
+      </el-form-item>
+      <el-form-item>
+        <el-button @click="handleSetConfig">更新 qbittorrent 连接设置</el-button>
+      </el-form-item>
+    </el-form>
+    <hr />
+
     <el-form :model="form" label-width="120px">
       <el-form-item label="RSS Url">
         <el-input v-model="form.rssUrl" clearable />
@@ -137,7 +234,7 @@ const tableRowClassName = ({ row: { title } }: { row: { title: string } }) => {
     </el-table>
   </div>
 </template>
-<style>
+<style lang="scss" scoped>
 .el-table .warning-row {
   --el-table-tr-bg-color: var(--el-color-warning-light-9);
 }
@@ -156,5 +253,15 @@ const tableRowClassName = ({ row: { title } }: { row: { title: string } }) => {
 }
 .chapter-list::-webkit-scrollbar {
   width: 0 !important;
+}
+
+.tag-list {
+  display: flex;
+  & > * {
+    margin-right: 10px;
+  }
+}
+hr {
+  margin: 10px 0;
 }
 </style>
