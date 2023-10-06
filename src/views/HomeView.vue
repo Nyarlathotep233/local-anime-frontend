@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { wildcardPattern } from 'wildcard-regex'
@@ -11,7 +12,8 @@ const TAG_TYPE_OF_STATUS = {
 
 const form = reactive({
   rssUrl: '',
-  notContainRule: '720|合集|繁体|JPTC|繁日|\\d+-\\d+|BIG5|MKV'
+  notContainRule: '',
+  downLoadPath: ''
 })
 
 const state = reactive({
@@ -20,12 +22,13 @@ const state = reactive({
   qbtConfigForm: {
     host: '',
     username: '',
-    password: ''
+    password: '',
+    defaultDownLoadPath: ''
   },
   intervalInstance: null as any
 })
 async function handleAddRss() {
-  const { rssUrl, notContainRule } = form
+  const { rssUrl } = form
   if (!rssUrl) {
     ElMessage({
       message: 'RSS Url为空',
@@ -34,9 +37,8 @@ async function handleAddRss() {
     return
   }
   const { data } =
-    (await axios.post('http://localhost:3000/qbt/addRssUrl', {
-      rssUrl,
-      notContainRule
+    (await axios.post('/qbt/addRssUrl', {
+      ...form
     })) || {}
 
   const { success } = data || {}
@@ -60,7 +62,7 @@ async function handleRequestRss() {
   }
 
   const { data } =
-    (await axios.post('http://localhost:3000/qbt/getRssDetail', {
+    (await axios.post('/qbt/getRssDetail', {
       rssUrl
     })) || {}
 
@@ -121,63 +123,70 @@ const matchesMustNotContainExpression = (title: string): boolean => {
 
 const tableRowClassName = ({ row: { title } }: { row: { title: string } }) => {
   if (!matchesMustNotContainExpression(title)) {
-    return ''
+    return 'error-row'
   }
   return 'success-row'
 }
 
-async function getQbtInfo() {
-  const { data } = (await axios.get('http://localhost:3000/qbt/getQbtInfo')) || {}
+async function getQbtStatus() {
+  const { data } = (await axios.get('/qbt/getQbtStatus')) || {}
 
   return data
 }
 
 async function initQbtInfo() {
-  state.qbtInfo = await getQbtInfo()
+  state.qbtInfo = await getQbtStatus()
 }
 
-async function getQbtConfig() {
-  const { data } = (await axios.get('http://localhost:3000/qbt/getQbtConfig')) || {}
+async function getQbtServerConfig() {
+  const { data } = (await axios.get('/qbt/getQbtServerConfig')) || {}
 
   return data
 }
 
 async function initQbtConfig() {
-  state.qbtConfigForm = (await getQbtConfig()).serverInfo
+  state.qbtConfigForm = (await getQbtServerConfig()).serverInfo
 }
 
 async function syncQbt() {
   initQbtInfo()
 
+  if (state.intervalInstance) {
+    clearInterval(state.intervalInstance)
+  }
   state.intervalInstance = setInterval(async () => {
     initQbtInfo()
   }, 10000)
 }
 
 async function getMikanInfo() {
-  const { data } = (await axios.get('http://localhost:3000/mikan/test')) || {}
+  const { data } = (await axios.get('/mikan/test')) || {}
 
   return data
 }
 
-async function handleSetConfig() {
+async function handleSetServerConfig() {
   const { data } =
-    (await axios.post('http://localhost:3000/qbt/setConfig', {
+    (await axios.post('/qbt/setServerConfig', {
       setting: {
         serverInfo: {
-          host: state.qbtConfigForm.host,
-          username: state.qbtConfigForm.username,
-          password: state.qbtConfigForm.password
+          ...state.qbtConfigForm
         }
       }
     })) || {}
 
   if (data.success) {
     ElMessage.success('更新配置成功')
+    // location.reload()
   }
 
-  initQbtConfig()
-  initQbtInfo()
+  init()
+}
+
+async function initDefaultConfig() {
+  const { data } = (await axios.get('/qbt/getDefaultConfig')) || {}
+  form.notContainRule = data?.defaultNotContainRule
+  form.downLoadPath = data?.defaultDownLoadPath
 }
 
 async function init() {
@@ -187,6 +196,7 @@ async function init() {
 }
 
 init()
+initDefaultConfig()
 </script>
 
 <template>
@@ -209,8 +219,11 @@ init()
       <el-form-item label="密码">
         <el-input v-model="state.qbtConfigForm.password" clearable show-password />
       </el-form-item>
+      <el-form-item label="默认下载地址">
+        <el-input v-model="state.qbtConfigForm.defaultDownLoadPath" clearable />
+      </el-form-item>
       <el-form-item>
-        <el-button @click="handleSetConfig">更新 qbittorrent 连接设置</el-button>
+        <el-button @click="handleSetServerConfig">更新 qbittorrent 代理服务设置</el-button>
       </el-form-item>
     </el-form>
     <hr />
@@ -221,6 +234,9 @@ init()
       </el-form-item>
       <el-form-item label="不包含规则">
         <el-input v-model="form.notContainRule" clearable />
+      </el-form-item>
+      <el-form-item label="下载地址">
+        <el-input v-model="form.downLoadPath" clearable />
       </el-form-item>
       <el-form-item>
         <el-button @click="handleRequestRss">解析这条RSS</el-button>
@@ -235,10 +251,10 @@ init()
   </div>
 </template>
 <style lang="scss" scoped>
-.el-table .warning-row {
-  --el-table-tr-bg-color: var(--el-color-warning-light-9);
+::v-deep .el-table .error-row {
+  --el-table-tr-bg-color: var(--el-color-error-light-9);
 }
-.el-table .success-row {
+::v-deep .el-table .success-row {
   --el-table-tr-bg-color: var(--el-color-success-light-9);
 }
 .main {
